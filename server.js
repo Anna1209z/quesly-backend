@@ -12,17 +12,60 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ База даних MongoDB підключена!'))
   .catch((err) => console.error('❌ Помилка підключення до MongoDB:', err));
 
+
+const questionSchema = new mongoose.Schema({
+  text: { type: String, required: true },
+  category: { type: String, default: 'General' },
+});
+
 // Схема відповіді
 const answerSchema = new mongoose.Schema({
   user: { type: String, default: 'anonymous_user' },
   text: { type: String, required: true },
+  questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
   likes: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 
+const Question = mongoose.model('Question', questionSchema);
 const Answer = mongoose.model('Answer', answerSchema);
 
 // ЕНДПОІНТИ (API)
+
+app.get('/api/questions/random', async (req, res) => {
+  try {
+    const count = await Question.countDocuments();
+    if (count === 0) {
+      // Якщо питань у базі немає — повертаємо дефолтне
+      return res.json({ text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" });
+    }
+    const random = Math.floor(Math.random() * count);
+    const question = await Question.findOne().skip(random);
+    res.json(question);
+  } catch (error) {
+    res.status(500).json({ message: 'Помилка отримання питання' });
+  }
+});
+
+// 2. Додати початковий масив питань (для наповнення бази)
+app.post('/api/questions/seed', async (req, res) => {
+  try {
+    const defaultQuestions = [
+      { text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" },
+      { text: "WHAT IS A MOVIE YOU CAN WATCH OVER AND OVER AGAIN?" },
+      { text: "IF YOU COULD HAVE DINNER WITH ANY HISTORICAL FIGURE, WHO WOULD IT BE?" },
+      { text: "WHAT IS THE BEST ADVICE YOU HAVE EVER RECEIVED?" },
+      { text: "IF YOU COULD INSTANTLY BECOME AN EXPERT IN SOMETHING, WHAT WOULD IT BE?" },
+    ];
+    await Question.deleteMany({}); // Очищаємо старі для уникнення дублікатів
+    const inserted = await Question.insertMany(defaultQuestions);
+    res.json({ message: 'Питання успішно додано у базу!', count: inserted.length });
+  } catch (error) {
+    res.status(500).json({ message: 'Помилка заповнення питань' });
+  }
+});
+
+
 
 // 1. Отримати всі відповіді у стрічку (сортуємо від найновіших)
 app.get('/api/answers', async (req, res) => {
