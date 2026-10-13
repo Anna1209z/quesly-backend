@@ -76,10 +76,18 @@ app.get('/api/questions/seed', async (req, res) => {
 
 
 
-// 1. Отримати всі відповіді у стрічку (сортуємо від найновіших)
+// Отримати всі відповіді (з підтримкою фільтрації за questionId)
 app.get('/api/answers', async (req, res) => {
   try {
-    const answers = await Answer.find().sort({ createdAt: -1 });
+    const { questionId } = req.query;
+    let filter = {};
+    if (questionId) {
+      filter.questionId = questionId;
+    }
+
+    const answers = await Answer.find(filter)
+      .populate('questionId', 'text')
+      .sort({ createdAt: -1 });
     res.json(answers);
   } catch (error) {
     res.status(500).json({ message: 'Помилка отримання даних' });
