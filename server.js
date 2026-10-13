@@ -34,13 +34,22 @@ const Answer = mongoose.model('Answer', answerSchema);
 
 app.get('/api/questions/random', async (req, res) => {
   try {
-    const count = await Question.countDocuments();
-    if (count === 0) {
-      // Якщо питань у базі немає — повертаємо дефолтне
-      return res.json({ text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" });
+    const { exclude } = req.query; // Отримуємо ID питання, яке треба пропустити
+    
+    let query = {};
+    if (exclude) {
+      query._id = { $ne: exclude }; // $ne = not equal (не дорівнює)
     }
+
+    const count = await Question.countDocuments(query);
+    if (count === 0) {
+      // Якщо інших питань немає або база порожня, шукаємо будь-яке
+      const fallback = await Question.findOne();
+      return res.json(fallback || { text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" });
+    }
+
     const random = Math.floor(Math.random() * count);
-    const question = await Question.findOne().skip(random);
+    const question = await Question.findOne(query).skip(random);
     res.json(question);
   } catch (error) {
     res.status(500).json({ message: 'Помилка отримання питання' });
