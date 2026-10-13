@@ -48,7 +48,7 @@ app.get('/api/questions/random', async (req, res) => {
 });
 
 // 2. Додати початковий масив питань (для наповнення бази)
-app.post('/api/questions/seed', async (req, res) => {
+app.get('/api/questions/seed', async (req, res) => {
   try {
     const defaultQuestions = [
       { text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" },
