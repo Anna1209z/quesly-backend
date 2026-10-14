@@ -82,7 +82,7 @@ app.get('/api/answers', async (req, res) => {
     const { questionId } = req.query;
     let filter = {};
     if (questionId) {
-      filter.questionId = questionId;
+      filter.questionId = new mongoose.Types.ObjectId(questionId);
     }
 
     const answers = await Answer.find(filter)
@@ -90,6 +90,7 @@ app.get('/api/answers', async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(answers);
   } catch (error) {
+    console.error('Помилка при отриманні відповідей:', error);
     res.status(500).json({ message: 'Помилка отримання даних' });
   }
 });
