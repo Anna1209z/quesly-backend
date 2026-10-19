@@ -100,33 +100,33 @@ app.get('/api/answers', async (req, res) => {
 app.post('/api/answers', async (req, res) => {
   try {
     const { user, text, questionId } = req.body;
-    
-    console.log('--- Створення відповіді ---');
-    console.log('Отримані дані:', { user, text, questionId });
+
+    console.log('--- POST /api/answers ---');
+    console.log('Отриманий questionId:', questionId);
 
     if (!text) {
-      return res.status(400).json({ message: 'Текст не може бути пустим' });
+      return res.status(400).json({ message: 'Текст порожній' });
     }
 
-    let parsedQId = null;
-    if (questionId) {
-      parsedQId = mongoose.Types.ObjectId.isValid(questionId) 
-        ? new mongoose.Types.ObjectId(questionId) 
-        : questionId;
+    // Перевіряємо та явно конвертуємо questionId
+    let validQId = null;
+    if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
+      validQId = new mongoose.Types.ObjectId(questionId);
     }
 
-    const newAnswer = new Answer({ 
-      user: user || 'anonymous_user', 
-      text, 
-      questionId: parsedQId 
+    const newAnswer = new Answer({
+      user: user || 'anonymous_user',
+      text,
+      questionId: validQId
     });
 
-    await newAnswer.save();
-    console.log('Збережено в базу:', newAnswer);
-    res.json(newAnswer);
+    const savedAnswer = await newAnswer.save();
+    console.log('Збережена відповідь:', savedAnswer);
+
+    res.json(savedAnswer);
   } catch (error) {
-    console.error('Помилка збереження:', error);
-    res.status(500).json({ message: 'Помилка збереження відповіді' });
+    console.error('Помилка створення відповіді:', error);
+    res.status(500).json({ message: 'Помилка сервера' });
   }
 });
 
