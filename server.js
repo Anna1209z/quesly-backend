@@ -75,23 +75,23 @@ app.get('/api/questions/seed', async (req, res) => {
 });
 
 
-
-// Отримати всі відповіді (з підтримкою фільтрації за questionId)
 app.get('/api/answers', async (req, res) => {
   try {
     const { questionId } = req.query;
-    let filter = {};
+    let query = {};
+    
     if (questionId) {
-      filter.questionId = new mongoose.Types.ObjectId(questionId);
+      query.questionId = questionId;
     }
 
-    const answers = await Answer.find(filter)
+    const answers = await Answer.find(query)
       .populate('questionId', 'text')
       .sort({ createdAt: -1 });
+
     res.json(answers);
   } catch (error) {
-    console.error('Помилка при отриманні відповідей:', error);
-    res.status(500).json({ message: 'Помилка отримання даних' });
+    console.error('Помилка сервера:', error);
+    res.status(500).json({ message: 'Помилка сервера' });
   }
 });
 
