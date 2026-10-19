@@ -99,13 +99,33 @@ app.get('/api/answers', async (req, res) => {
 // 2. Надіслати нову відповідь на питання дня
 app.post('/api/answers', async (req, res) => {
   try {
-    const { user, text } = req.body;
-    if (!text) return res.status(400).json({ message: 'Текст не може бути пустим' });
+    const { user, text, questionId } = req.body;
+    
+    console.log('--- Створення відповіді ---');
+    console.log('Отримані дані:', { user, text, questionId });
 
-    const newAnswer = new Answer({ user, text });
+    if (!text) {
+      return res.status(400).json({ message: 'Текст не може бути пустим' });
+    }
+
+    let parsedQId = null;
+    if (questionId) {
+      parsedQId = mongoose.Types.ObjectId.isValid(questionId) 
+        ? new mongoose.Types.ObjectId(questionId) 
+        : questionId;
+    }
+
+    const newAnswer = new Answer({ 
+      user: user || 'anonymous_user', 
+      text, 
+      questionId: parsedQId 
+    });
+
     await newAnswer.save();
-    res.status(201).json(newAnswer);
+    console.log('Збережено в базу:', newAnswer);
+    res.json(newAnswer);
   } catch (error) {
+    console.error('Помилка збереження:', error);
     res.status(500).json({ message: 'Помилка збереження відповіді' });
   }
 });
