@@ -79,9 +79,10 @@ app.get('/api/answers', async (req, res) => {
   try {
     const { questionId } = req.query;
     let query = {};
-    
-    if (questionId) {
-      query.questionId = questionId;
+
+    // Якщо передано ID питання — перетворюємо його на суворий ObjectId для MongoDB
+    if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
+      query.questionId = new mongoose.Types.ObjectId(questionId);
     }
 
     const answers = await Answer.find(query)
@@ -91,7 +92,7 @@ app.get('/api/answers', async (req, res) => {
     res.json(answers);
   } catch (error) {
     console.error('Помилка сервера:', error);
-    res.status(500).json({ message: 'Помилка сервера' });
+    res.status(500).json({ message: 'Помилка завантаження відповідей' });
   }
 });
 
