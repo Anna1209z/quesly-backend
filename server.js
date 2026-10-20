@@ -1,17 +1,28 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const JWT_SECRET = process.env.JWT_SECRET || 'quesly_super_secret_key_123';
+
 // Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ База даних MongoDB підключена!'))
   .catch((err) => console.error('❌ Помилка підключення до MongoDB:', err));
 
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  bio: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
+});
 
 const questionSchema = new mongoose.Schema({
   text: { type: String, required: true },
@@ -27,10 +38,81 @@ const answerSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Question = mongoose.model('Question', questionSchema);
 const Answer = mongoose.model('Answer', answerSchema);
 
 // ЕНДПОІНТИ (API)
+
+// 1. Реєстрація користувача
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Заповніть усі обов\'язкові поля' });
+    }
+
+    // Перевірка наявності користувача
+    const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Користувач з таким email або нікнеймом вже існує' });
+    }
+
+    // Хешування пароля
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      username: username.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword
+    });
+
+    await newUser.save();
+
+    // Генерація JWT
+    const token = jwt.sign({ userId: newUser._id, username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      token,
+      user: { id: newUser._id, username: newUser.username, email: newUser.email, bio: newUser.bio }
+    });
+  } catch (error) {
+    console.error('Помилка реєстрації:', error);
+    res.status(500).json({ message: 'Помилка сервера при реєстрації' });
+  }
+});
+
+// 2. Вхід (Login)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Введіть email та пароль' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(400).json({ message: 'Невірний email або пароль' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Невірний email або пароль' });
+    }
+
+    const token = jwt.sign({ userId: user._id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      token,
+      user: { id: user._id, username: user.username, email: user.email, bio: user.bio }
+    });
+  } catch (error) {
+    console.error('Помилка входу:', error);
+    res.status(500).json({ message: 'Помилка сервера при вході' });
+  }
+});
 
 app.get('/api/questions/random', async (req, res) => {
   try {
