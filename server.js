@@ -11,7 +11,6 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'quesly_super_secret_key_123';
 
-// Підключення до MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ База даних MongoDB підключена!'))
   .catch((err) => console.error('❌ Помилка підключення до MongoDB:', err));
@@ -29,7 +28,6 @@ const questionSchema = new mongoose.Schema({
   category: { type: String, default: 'General' },
 });
 
-// Схема відповіді
 const answerSchema = new mongoose.Schema({
   user: { type: String, default: 'anonymous_user' },
   text: { type: String, required: true },
@@ -42,9 +40,7 @@ const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Question = mongoose.model('Question', questionSchema);
 const Answer = mongoose.model('Answer', answerSchema);
 
-// ЕНДПОІНТИ (API)
 
-// 1. Реєстрація користувача
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -53,7 +49,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ message: 'Заповніть усі обов\'язкові поля' });
     }
 
-    // Перевірка наявності користувача
     const existingUser = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
     if (existingUser) {
       return res.status(400).json({ message: 'Користувач з таким email або нікнеймом вже існує' });
@@ -81,7 +76,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 2. Вхід (Login)
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -114,16 +109,14 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/questions/random', async (req, res) => {
   try {
-    const { exclude } = req.query; // Отримуємо ID питання, яке треба пропустити
-    
+    const { exclude } = req.query;     
     let query = {};
     if (exclude) {
-      query._id = { $ne: exclude }; // $ne = not equal (не дорівнює)
+      query._id = { $ne: exclude }; 
     }
 
     const count = await Question.countDocuments(query);
     if (count === 0) {
-      // Якщо інших питань немає або база порожня, шукаємо будь-яке
       const fallback = await Question.findOne();
       return res.json(fallback || { text: "IF YOU ONLY HAD ONE DAY OFF, WHAT WOULD YOU DO?" });
     }
@@ -136,7 +129,6 @@ app.get('/api/questions/random', async (req, res) => {
   }
 });
 
-// 2. Додати початковий масив питань (для наповнення бази)
 app.get('/api/questions/seed', async (req, res) => {
   try {
     const defaultQuestions = [
@@ -146,7 +138,7 @@ app.get('/api/questions/seed', async (req, res) => {
       { text: "WHAT IS THE BEST ADVICE YOU HAVE EVER RECEIVED?" },
       { text: "IF YOU COULD INSTANTLY BECOME AN EXPERT IN SOMETHING, WHAT WOULD IT BE?" },
     ];
-    await Question.deleteMany({}); // Очищаємо старі для уникнення дублікатів
+    await Question.deleteMany({}); 
     const inserted = await Question.insertMany(defaultQuestions);
     res.json({ message: 'Питання успішно додано у базу!', count: inserted.length });
   } catch (error) {
@@ -160,7 +152,6 @@ app.get('/api/answers', async (req, res) => {
     const { questionId } = req.query;
     let query = {};
 
-    // Якщо передано ID питання — перетворюємо його на суворий ObjectId для MongoDB
     if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
       query.questionId = new mongoose.Types.ObjectId(questionId);
     }
@@ -176,7 +167,6 @@ app.get('/api/answers', async (req, res) => {
   }
 });
 
-// 2. Надіслати нову відповідь на питання дня
 app.post('/api/answers', async (req, res) => {
   try {
     const { user, text, questionId } = req.body;
@@ -188,7 +178,6 @@ app.post('/api/answers', async (req, res) => {
       return res.status(400).json({ message: 'Текст порожній' });
     }
 
-    // Перевіряємо та явно конвертуємо questionId
     let validQId = null;
     if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
       validQId = new mongoose.Types.ObjectId(questionId);
@@ -210,7 +199,6 @@ app.post('/api/answers', async (req, res) => {
   }
 });
 
-// 3. Поставити лайк відповіді
 app.post('/api/answers/:id/like', async (req, res) => {
   try {
     const answer = await Answer.findById(req.params.id);
