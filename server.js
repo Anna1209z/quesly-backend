@@ -59,7 +59,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ message: 'Користувач з таким email або нікнеймом вже існує' });
     }
 
-    // Хешування пароля
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
@@ -70,7 +69,6 @@ app.post('/api/auth/register', async (req, res) => {
 
     await newUser.save();
 
-    // Генерація JWT
     const token = jwt.sign({ userId: newUser._id, username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
