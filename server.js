@@ -107,6 +107,15 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find({}, '-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Помилка отримання користувачів' });
+  }
+});
+
 app.get('/api/questions/random', async (req, res) => {
   try {
     const { exclude } = req.query;     
